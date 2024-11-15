@@ -1,0 +1,139 @@
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --canvas-bg-color: #253C59;
+  --panel-bg-color: rgba(31, 50, 73, 0.625);
+  --panel-text-color: #D8D9D7;
+  --panel-feature-color: #D97904;
+}
+
+body {
+  background-color: var(--canvas-bg-color);
+  font-family: "Courier New", Courier, monospace;
+}
+
+#canvas {
+  position: relative;
+  display: block;
+}
+
+/* Score board */
+
+.score-board {
+  position: absolute;
+  top: 1.6rem;
+  left: 1.6rem;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+  padding: 0.625rem;
+  padding-right: 1rem;
+  width: max-content;
+  border-radius: 0.5rem;
+  color: var(--panel-text-color);
+  font-weight: bold;
+  background-color: var(--panel-bg-color);
+  pointer-events: none;
+}
+
+.score-content {
+  display: flex;
+  flex-direction: column;
+  row-gap: 0.25rem;
+  align-items: flex-start;
+  margin-bottom: 0.25rem;
+}
+
+.score-content .title {
+  font-size: 0.725rem;
+}
+
+.score-content #score-value {
+  font-size: 1.125rem;
+}
+
+.score-board .game-difficulty {
+  display: flex;
+  align-items: center;
+  column-gap: 0.25rem;
+  font-size: 0.65rem;
+}
+
+.score-board .game-difficulty #difficulty-value {
+  text-transform: capitalize;
+  font-size: 0.7rem;
+  color: var(--panel-feature-color);
+}
+
+/* Game over panel */
+.game-over-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: none;
+  width: 100%;
+  max-width: 300px;
+  padding: 1.25rem 1rem;
+  border-radius: 0.75rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  background-color: var(--panel-bg-color);
+  color: var(--panel-text-color);
+  font-weight: bold;
+  box-shadow: 0 0 30px 0 rgba(255, 255, 255, 0.05);
+}
+
+.game-over-panel .game-over {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.game-over-panel .final-point {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: flex-end;
+  column-gap: 0.25rem;
+  font-size: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.game-over-panel .final-point #point-value {
+  font-size: 1.25rem;
+  transform: translateY(5px);
+}
+
+.game-over-panel .restart-button {
+  align-self: stretch;
+  text-align: center;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.75rem;
+  background-color: var(--panel-feature-color);
+  color: var(--panel-text-color);
+  outline: none;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.game-over-panel .restart-button:hover,
+.game-over-panel .restart-button:focus {
+  text-decoration: underline;
+}
+
+.game-over-panel .restart-button:active {
+  transform: translateY(1px);
+}
+
+@media screen and (min-width: 600px) {
+  .game-over-panel {
+    max-width: 380px;
+  }
+}

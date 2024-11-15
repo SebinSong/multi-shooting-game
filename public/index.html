@@ -1,0 +1,36 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canvas game</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div id="score-board" class="score-board">
+    <div class="score-content">
+      <span class="title">Score:</span>
+      <span id="score-value">0</span>
+    </div>
+
+    <div class="game-difficulty">
+      <span>Lv:</span>
+      <span id="difficulty-value"></span>
+    </div>
+  </div>
+
+  <div id="game-over" class="game-over-panel">
+    <div class="game-over">Game over</div>
+    <div class="final-point">
+      <span id="point-value">0</span>
+      <span>points</span>
+    </div>
+    <button id="restart-button" class="restart-button">Restart game</button>
+  </div>
+
+  <script src="./index.js"></script>
+</body>
+</html>
