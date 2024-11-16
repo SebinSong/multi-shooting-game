@@ -204,6 +204,23 @@ class ProjectTile extends ObjectCircle {
   }
 }
 
+class Enemy extends ObjectCircle {
+  constructor (args = {}) {
+    super(args)
+    this.velocity = args.velocity || new Velocity(0, 0)
+    this.radiusTo = args.radius
+    this.id = randomHexString()
+  }
+
+  update () {
+    this.x += this.velocity.x
+    this.y += this.velocity.y
+
+    this.draw()
+  }
+}
+
+
 class ParticlePiece extends ObjectCircle {
   constructor (args = {}) {
     super(args)
@@ -363,8 +380,9 @@ function startGame () {
   gameOverHandler.hide()
 
   // score-board
-  scoreHandler.reset()
-  scoreHandler.show()
+  // scoreHandler.reset()
+  // scoreHandler.show()
+  scoreHandler.hide()
 
   animate()
 }
@@ -376,8 +394,6 @@ function animate () {
 
   // Draw objects
   player.update()
-  projectiles.forEach(projectile => projectile.update())
-  particleGroups.forEach(group => group.update())
 }
 
 // event handlers
@@ -386,7 +402,7 @@ function onResize () {
   initObjects()
 }
 
-function onClick (e) {
+function onWindowClick (e) {
   const center = getPageCenter()
   const angle = getAngle(center, { x: e.clientX, y: e.clientY })
   const vx = PROJECTILE_VELOCITY_MAGNITUDE * Math.cos(angle)
@@ -404,7 +420,7 @@ function onClick (e) {
 
 function setupEvents () {
   window.addEventListener('resize', onResize)
-  window.addEventListener('click', onClick)
+  // window.addEventListener('click', onWindowClick)
   window.addEventListener('blur', () => { isTabActive = false })
   window.addEventListener('focus', () => { isTabActive = true })
 }
