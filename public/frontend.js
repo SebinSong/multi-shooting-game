@@ -1,11 +1,11 @@
-let canvas
-let c // 2d context
-
 // Player related
-let player
+let frontendPlayers = {}
+let myPlayer = null
+const playerInputs = []
+let sequenceNumber = 0
 
 // Projectiles
-let projectiles = []
+let frontendProjectiles = []
 
 // Particles
 let particleGroups = []
@@ -13,8 +13,18 @@ let particleGroups = []
 // misc
 let isTabActive = true
 let requestId = null
+let keyboardIntervalId = null
 
-// DOM elements
+// socket
+const socket = io()
+
+// socket-events
+const UPDATE_PLAYERS = 'update-players'
+const PLAYER_DISCONNECTED = 'player-disconnected'
+const KEYDOWN = 'keydown'
+const PLAYER_SPEED = 3
+
+// DOM-related
 let domRegistered = false
 const scoreHandler = {
   boardEl: null,
@@ -85,237 +95,29 @@ const gameOverHandler = {
   }
 }
 
+const keyboardTracker = {
+  up: false,
+  down: false,
+  left: false,
+  right: false
+}
+
 
 // constants
-const PLAYER_RADIUS = 15
 const PROJECTILE_RADIUS = 5
 const PROJECTILE_VELOCITY_MAGNITUDE = 4
-const MAX_VELOCITY = 15
-const ACCEL_FACTOR = 1.0625
 const PARTICLE_NUMBERS = 8
 const POINT_HIT = 2
 const POINT_KILL = 5
+const MAX_PLAYERS = 5
 
 const colors = {
   bg: '#253C59',
   player_bg: '#D8D9D7',
   projectile_bg: '#D8D9D7',
-  enemy_colorset: ['#618C03', '#F2B705', '#D97904', '#D92B04', '#F27983']
+  player_colorset: ['#618C03', '#F2B705', '#D97904', '#D92B04', '#F27983']
 }
 
-
-// player class
-class ObjectCircle {
-  constructor ({ x, y, radius, color } = {}) {
-    this.x = x
-    this.y = y
-    this.radius = radius
-    this.color = color
-  }
-
-  draw () {
-    c.save()
-    c.beginPath()
-    c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false)
-    c.fillStyle = this.color
-    c.fill()
-    c.restore()
-  }
-
-  setPosition (x, y) {
-    this.x = x
-    this.y = y
-  }
-
-  get isInCanvas () {
-    return this.x >= 0 &&
-      this.x <= canvas.width &&
-      this.y >= 0 &&
-      this.y <= canvas.height
-  }
-
-  overlaps (circle) {
-    const [dx, dy] = [
-      circle.x - this.x,
-      circle.y - this.y
-    ]
-    const distCenters = Math.hypot(dx, dy)
-
-    return distCenters < (this.radius + circle.radius)
-  }
-}
-
-class Velocity {
-  constructor (x, y) {
-    this.x = x
-    this.y = y
-  }
-
-  get magnitude () {
-    return Math.sqrt(this.x * this.x + this.y * this.y)
-  }
-
-  accelerate () {
-    if (this.magnitude === MAX_VELOCITY) { return }
-    else if (this.magnitude > MAX_VELOCITY) {
-      const f = MAX_VELOCITY / this.magnitude
-      this.x *= f
-      this.y *= f
-    } else {
-      this.x *= ACCEL_FACTOR
-      this.y *= ACCEL_FACTOR
-    }
-  }
-}
-
-class Player extends ObjectCircle {
-  constructor (args = {}) {
-    super(args)
-  }
-
-  update () {
-    this.draw()
-  }
-}
-
-class ProjectTile extends ObjectCircle {
-  constructor (args = {}) {
-    super(args)
-    this.velocity = args.velocity || new Velocity(0, 0)
-    this.id = randomHexString()
-  }
-
-  update () {
-    if (!this.isInCanvas) {
-      this.remove()
-      return
-    }
-
-    this.velocity.accelerate()
-    this.x += this.velocity.x
-    this.y += this.velocity.y
-
-    this.draw()
-  }
-
-  remove () {
-    const index = projectiles.findIndex(entry => entry.id === this.id)
-    projectiles.splice(index, 1)
-  }
-}
-
-class Enemy extends ObjectCircle {
-  constructor (args = {}) {
-    super(args)
-    this.velocity = args.velocity || new Velocity(0, 0)
-    this.radiusTo = args.radius
-    this.id = randomHexString()
-  }
-
-  update () {
-    this.x += this.velocity.x
-    this.y += this.velocity.y
-
-    this.draw()
-  }
-}
-
-
-class ParticlePiece extends ObjectCircle {
-  constructor (args = {}) {
-    super(args)
-    this.velocity = args.velocity || new Velocity(0, 0)
-    this.id = randomHexString()
-    this.parent = args.parent || null
-  }
-
-  update () {
-    if (!this.isInCanvas) {
-      this.remove()
-      return
-    }
-
-    this.x += this.velocity.x
-    this.y += this.velocity.y
-
-    this.velocity.x *= 0.935
-    this.velocity.y *= 0.935
-
-    this.radius -= 0.075
-
-    if (this.radius < 0.5) {
-      this.remove()
-    } else {
-      this.draw()
-    }
-  }
-
-  remove () {
-    this.parent.removeParticle(this.id)
-  }
-}
-
-class ParticleGroup {
-  constructor (args = {}) {
-    this.particles = []
-    this.id = randomHexString()
-
-    const { num: particleNumbers, rRange } = this.getParticleDetails(args.hitRadius)
-    for (let i = 0; i < particleNumbers; i++) {
-      this.particles.push(
-        new ParticlePiece({
-          x: args.x, y: args.y,
-          color: args.color,
-          radius: 1.5 + Math.random() * rRange,
-          velocity: this.getRandomParticleVelocity(),
-          parent: this
-        })
-      )
-    }
-  }
-
-  getParticleDetails (hitRadius = 15) {
-    const size = hitRadius > 30
-      ? 'big'
-      : hitRadius > 20
-        ? 'medium'
-        : 'small'
-
-    switch (size) {
-      case 'big':
-        return { num: 12, rRange: 7.5 }
-      case 'medium':
-        return { num: 9, rRange: 5 }
-      default:
-        return { num: 6, rRange: 2.5 }
-    }
-  }
-
-  getRandomParticleVelocity () {
-    const angle = Math.random() * (Math.PI * 2)
-    const vMag = 3 + 5 * Math.random() 
-    const vx = vMag * Math.cos(angle)
-    const vy = vMag * Math.sin(angle)
-
-    return new Velocity(vx, vy)
-  }
-
-  update () {
-    if (this.particles.length === 0) {
-      this.remove()
-    } else {
-      this.particles.forEach(particle => particle.update())
-    }
-  }
-
-  removeParticle (particleId) {
-    this.particles = this.particles.filter(p => p.id !== particleId)
-  }
-
-  remove () {
-    particleGroups = particleGroups.filter(group => group.id !== this.id)
-  }
-}
 
 function initDOM () {
   if (!domRegistered) {
@@ -339,19 +141,16 @@ function initDOM () {
     c = canvas.getContext('2d')
   }
 
-  canvas.width = window.innerWidth
-  canvas.height = window.innerHeight
+  // scaling the canvas based on the device pixel ratio
+  // reference: https://stackoverflow.com/questions/53233096/how-to-set-html5-canvas-size-to-match-display-size-in-device-pixels
+  canvas.width = window.innerWidth * devicePixelRatio
+  canvas.height = window.innerHeight * devicePixelRatio
+  c.scale(devicePixelRatio, devicePixelRatio)
 }
 
 function initObjects () {
   // create the player
   const pCenter = getPageCenter()
-  player = new Player({
-    x: pCenter.x,
-    y: pCenter.y,
-    radius: PLAYER_RADIUS,
-    color: colors.player_bg
-  })
 
   // flush projectiles
   projectiles = []
@@ -367,6 +166,7 @@ function paintBackground () {
 
 function endGame () {
   window.cancelAnimationFrame(requestId)
+  window.clearInterval(keyboardIntervalId)
 
   paintBackground()
   scoreHandler.hide()
@@ -385,6 +185,29 @@ function startGame () {
   scoreHandler.hide()
 
   animate()
+  keyboardIntervalId = setInterval(() => {
+    checkKeyboardEvents()
+  }, 15)
+}
+
+function checkKeyboardEvents () {
+  if (!myPlayer) { return }
+
+  const { up, left, down, right } = keyboardTracker
+  const xVal = (left ? -1: 0) + (right ? 1 : 0)
+  const yVal = (up ? -1 : 0) + (down ? 1 : 0)
+
+  if (xVal === 0 && yVal === 0) { return }
+
+  sequenceNumber++
+  const playload = { x: xVal, y: yVal, sequenceNumber }
+  socket.emit(KEYDOWN, playload)
+  playerInputs.push(playload)
+
+  myPlayer.x += xVal * PLAYER_SPEED
+  myPlayer.y += yVal * PLAYER_SPEED
+
+
 }
 
 function animate () {
@@ -392,11 +215,12 @@ function animate () {
   // clear canvas
   paintBackground()
 
-  // Draw objects
-  player.update()
+  // render players
+  Object.values(frontendPlayers).forEach(player => player.update())
 }
 
-// event handlers
+// ---------------- DOM event handlers ----------------
+
 function onResize () {
   initDOM()
   initObjects()
@@ -418,11 +242,66 @@ function onWindowClick (e) {
   projectiles.push(projectile)
 }
 
-function setupEvents () {
+function onKeyDown (e) {
+  switch (e.code) {
+    case 'KeyA':
+    case 'ArrowLeft': {
+      keyboardTracker.left = true
+      break
+    }
+    case 'KeyD':
+    case 'ArrowRight': {
+      keyboardTracker.right = true
+      break
+    }
+    case 'KeyS':
+    case 'ArrowDown': {
+      keyboardTracker.down = true
+      break
+    }
+    case 'KeyW':
+    case 'ArrowUp': {
+      keyboardTracker.up = true
+      break
+    }
+  }
+}
+
+function onKeyUp (e) {
+  switch (e.code) {
+    case 'KeyA':
+    case 'ArrowLeft': {
+      keyboardTracker.left = false
+      break
+    }
+    case 'KeyD':
+    case 'ArrowRight': {
+      keyboardTracker.right = false
+      break
+    }
+    case 'KeyS':
+    case 'ArrowDown': {
+      keyboardTracker.down = false
+      break
+    }
+    case 'KeyW':
+    case 'ArrowUp': {
+      keyboardTracker.up = false
+      break
+    }
+  }
+}
+
+function setupDOMEvents () {
   window.addEventListener('resize', onResize)
+
   // window.addEventListener('click', onWindowClick)
   window.addEventListener('blur', () => { isTabActive = false })
   window.addEventListener('focus', () => { isTabActive = true })
+
+  // keyboard events
+  window.addEventListener('keydown', onKeyDown)
+  window.addEventListener('keyup', onKeyUp)
 }
 
 // helpers
@@ -463,6 +342,65 @@ function randomIntBetweenRange (a, b) {
   return a + Math.ceil(d * Math.random())
 }
 
+// -------- socket.io ------------
+function setupSocketEventHandlers (socket) {
+  socket.on(UPDATE_PLAYERS, (serverPlayers) => {
+    const idsServer = Object.keys(serverPlayers)
+    const idsClient = Object.keys(frontendPlayers)
+    const idsToDelete = idsClient.filter(pId => !idsServer.includes(pId))
+    
+    idsToDelete.forEach(idDel => {
+      delete frontendPlayers[idDel]
+    })
+
+    for (const playerId of idsServer) {
+      const serverPlayer = serverPlayers[playerId]
+
+      if (!frontendPlayers[playerId]) {
+        const player = new Player({
+          x: serverPlayer.x,
+          y: serverPlayer.y,
+          color: serverPlayer.color
+        })
+
+        frontendPlayers[playerId] = player
+      } else {
+        const player = frontendPlayers[playerId]
+
+        player.color = serverPlayer.color
+
+        if (playerId === socket.id) {
+          const foundFrontendIndex = playerInputs.findIndex(input => input.sequenceNumber === serverPlayer.sequenceNumber)
+
+          if (foundFrontendIndex >= 0) {
+            playerInputs.splice(0, foundFrontendIndex + 1)
+
+            playerInputs.forEach(input => {
+              player.x += input.x * PLAYER_SPEED
+              player.y += input.y * PLAYER_SPEED
+            })
+          }
+        } else {
+          gsap.to(player, {
+            x: serverPlayer.x,
+            y: serverPlayer.y,
+            duration: 0.015
+          })
+        }
+      }
+    }
+
+    myPlayer = frontendPlayers[socket.id]
+  })
+
+  socket.on(PLAYER_DISCONNECTED, playerId => {
+    delete frontendPlayers[playerId]
+  })
+}
+
+// -------- socket.io END ------------
+
+setupSocketEventHandlers(socket)
 initDOM()
-setupEvents()
+setupDOMEvents()
 startGame()

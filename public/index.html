@@ -4,6 +4,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Canvas game</title>
 
+  <script src="https://cdn.socket.io/4.8.0/socket.io.min.js" integrity="sha384-OoIbkvzsFFQAG88r+IqMAjyOtYDPGO0cqK5HF5Uosdy/zUEGySeAzytENMDynREd" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <link rel="stylesheet" href="./styles.css" />
 </head>
@@ -31,6 +32,18 @@
     <button id="restart-button" class="restart-button">Restart game</button>
   </div>
 
-  <script src="./index.js"></script>
+  <script>
+    // canvas-related global variables
+    let canvas
+    let c
+    const devicePixelRatio = window.devicePixelRatio || 1
+  </script>
+  <script src="./utils/ObjectCircle.js"></script>
+  <script src="./utils/Velocity.js"></script>
+  <script src="./utils/Enemy.js"></script>
+  <script src="./utils/Player.js"></script>
+  <script src="./utils/Projectile.js"></script>
+  <script src="./utils/ParticleGroup.js"></script>
+  <script src="./frontend.js"></script>
 </body>
 </html>
