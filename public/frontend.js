@@ -102,7 +102,6 @@ const keyboardTracker = {
   right: false
 }
 
-
 // constants
 const PROJECTILE_RADIUS = 5
 const PROJECTILE_VELOCITY_MAGNITUDE = 4
@@ -153,7 +152,7 @@ function initObjects () {
   const pCenter = getPageCenter()
 
   // flush projectiles
-  projectiles = []
+  frontendProjectiles = []
   particleGroups = []
 }
 
@@ -217,6 +216,9 @@ function animate () {
 
   // render players
   Object.values(frontendPlayers).forEach(player => player.update())
+
+  // render projectiles
+  frontendProjectiles.forEach(projectile => projectile.update())
 }
 
 // ---------------- DOM event handlers ----------------
@@ -227,19 +229,20 @@ function onResize () {
 }
 
 function onWindowClick (e) {
-  const center = getPageCenter()
+  const center = { x: myPlayer.x, y: myPlayer.y }
   const angle = getAngle(center, { x: e.clientX, y: e.clientY })
   const vx = PROJECTILE_VELOCITY_MAGNITUDE * Math.cos(angle)
   const vy = PROJECTILE_VELOCITY_MAGNITUDE * Math.sin(angle)
 
-  const projectile = new ProjectTile({
+  const projectile = new Projectile({
     x: center.x, y: center.y,
     radius: PROJECTILE_RADIUS,
     color: colors.projectile_bg,
-    velocity: new Velocity(vx, vy)
+    velocity: new Velocity(vx, vy),
+    parent: frontendProjectiles
   })
 
-  projectiles.push(projectile)
+  frontendProjectiles.push(projectile)
 }
 
 function onKeyDown (e) {
@@ -295,7 +298,7 @@ function onKeyUp (e) {
 function setupDOMEvents () {
   window.addEventListener('resize', onResize)
 
-  // window.addEventListener('click', onWindowClick)
+  window.addEventListener('click', onWindowClick)
   window.addEventListener('blur', () => { isTabActive = false })
   window.addEventListener('focus', () => { isTabActive = true })
 
@@ -307,8 +310,8 @@ function setupDOMEvents () {
 // helpers
 function getPageCenter () {
   return {
-    x: canvas.width / 2,
-    y: canvas.height / 2
+    x: canvas.width / 2 / devicePixelRatio,
+    y: canvas.height / 2 / devicePixelRatio
   }
 }
 

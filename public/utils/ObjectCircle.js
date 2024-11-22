@@ -21,10 +21,14 @@ class ObjectCircle {
   }
 
   get isInCanvas () {
+    const viewArea = {
+      width: canvas.width * (1 / devicePixelRatio),
+      height: canvas.height * (1 / devicePixelRatio)
+    }
     return this.x >= 0 &&
-      this.x <= canvas.width &&
+      this.x <= viewArea.width &&
       this.y >= 0 &&
-      this.y <= canvas.height
+      this.y <= viewArea.height
   }
 
   overlaps (circle) {

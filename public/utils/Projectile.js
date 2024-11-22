@@ -3,6 +3,7 @@ class Projectile extends ObjectCircle {
     super(args)
     this.velocity = args.velocity || new Velocity(0, 0)
     this.id = randomHexString()
+    this.parent = args.parent
   }
 
   update () {
@@ -19,7 +20,7 @@ class Projectile extends ObjectCircle {
   }
 
   remove () {
-    const index = projectiles.findIndex(entry => entry.id === this.id)
-    projectiles.splice(index, 1)
+    const index = this.parent.findIndex(entry => entry.id === this.id)
+    this.parent.splice(index, 1)
   }
 }
