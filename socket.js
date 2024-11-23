@@ -1,5 +1,9 @@
 const { Server } = require('socket.io')
+const { Projectile } = require('./backend-utils/Projectile')
+// state
 const backendPlayers = {}
+const backendProjectiles = {}
+
 const playerColorset = ['#618C03', '#F2B705', '#D97904', '#D92B04', '#F27983']
 const getColor = () => {
   const pArr = Object.values(backendPlayers)
@@ -8,8 +12,14 @@ const getColor = () => {
 
 // events
 const UPDATE_PLAYERS = 'update-players'
+const UPDATE_PROJECTILES = 'update-projectiles'
 const PLAYER_DISCONNECTED = 'player-disconnected'
 const KEYDOWN = 'keydown'
+const PROJECTILE_FIRED = 'projectile-fired'
+
+// constants
+const PROJECTILE_VELOCITY_MAGNITUDE = 4
+const PROJECTILE_RADIUS = 5
 const PLAYER_SPEED = 3
 
 function setupSocketIO (server) {
@@ -43,10 +53,37 @@ function setupSocketIO (server) {
         player.sequenceNumber = sequenceNumber
       }
     })
+
+    socket.on(PROJECTILE_FIRED, ({ center, angle }) => {
+      if (!backendProjectiles[socket.id]) {
+        backendProjectiles[socket.id] = []
+      }
+
+      const vx = PROJECTILE_VELOCITY_MAGNITUDE * Math.cos(angle)
+      const vy = PROJECTILE_VELOCITY_MAGNITUDE * Math.sin(angle)
+      const projectile = new Projectile({
+        x: center.x,
+        y: center.y,
+        radius: PROJECTILE_RADIUS,
+        velocity: new Velocity(vx, vy),
+        parent: backendProjectiles[socket.id]
+      })
+
+      backendProjectiles[socket.id].push(projectile)
+    })
   })
 
   setInterval(() => {
+    // update projectile positions
+    for (const playerId in backendProjectiles) {
+      const ownerPlayer = backendPlayers[playerId]
+      for (const projectile of backendProjectiles[playerId]) {
+        projectile.update()
+      }
+    }
+
     io.emit(UPDATE_PLAYERS, backendPlayers)
+    io.emit(UPDATE_PROJECTILES, backendProjectiles)
   }, 15)
 }
 

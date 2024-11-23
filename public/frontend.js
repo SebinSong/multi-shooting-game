@@ -20,8 +20,10 @@ const socket = io()
 
 // socket-events
 const UPDATE_PLAYERS = 'update-players'
+const UPDATE_PROJECTILES = 'update-projectiles'
 const PLAYER_DISCONNECTED = 'player-disconnected'
 const KEYDOWN = 'keydown'
+const PROJECTILE_FIRED = 'projectile-fired'
 const PLAYER_SPEED = 3
 
 // DOM-related
@@ -114,6 +116,10 @@ const colors = {
   bg: '#253C59',
   player_bg: '#D8D9D7',
   projectile_bg: '#D8D9D7',
+  projectile_colors: {
+    mine: '#D8D9D7',
+    enemy: '#F2B705'
+  },
   player_colorset: ['#618C03', '#F2B705', '#D97904', '#D92B04', '#F27983']
 }
 
@@ -234,15 +240,16 @@ function onWindowClick (e) {
   const vx = PROJECTILE_VELOCITY_MAGNITUDE * Math.cos(angle)
   const vy = PROJECTILE_VELOCITY_MAGNITUDE * Math.sin(angle)
 
-  const projectile = new Projectile({
-    x: center.x, y: center.y,
-    radius: PROJECTILE_RADIUS,
-    color: colors.projectile_bg,
-    velocity: new Velocity(vx, vy),
-    parent: frontendProjectiles
-  })
+  // const projectile = new Projectile({
+  //   center,
+  //   clickPoint: { x: e.clientX, y: e.clientY },
+  //   radius: PROJECTILE_RADIUS,
+  //   color: colors.projectile_bg,
+  //   velocity: new Velocity(vx, vy),
+  //   parent: frontendProjectiles
+  // })
 
-  frontendProjectiles.push(projectile)
+  socket.emit(PROJECTILE_FIRED, { center, angle })
 }
 
 function onKeyDown (e) {
@@ -394,6 +401,10 @@ function setupSocketEventHandlers (socket) {
     }
 
     myPlayer = frontendPlayers[socket.id]
+  })
+
+  socket.on(UPDATE_PROJECTILES, (serverProjectiles) => {
+    console.log('TODO: draw projectiles', serverProjectiles)
   })
 
   socket.on(PLAYER_DISCONNECTED, playerId => {
