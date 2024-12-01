@@ -5,7 +5,7 @@ const playerInputs = []
 let sequenceNumber = 0
 
 // Projectiles
-let frontendProjectiles = []
+let frontendProjectiles = {}
 
 // Particles
 let particleGroups = []
@@ -24,7 +24,6 @@ const UPDATE_PROJECTILES = 'update-projectiles'
 const PLAYER_DISCONNECTED = 'player-disconnected'
 const KEYDOWN = 'keydown'
 const PROJECTILE_FIRED = 'projectile-fired'
-const PLAYER_SPEED = 3
 
 // DOM-related
 let domRegistered = false
@@ -110,6 +109,7 @@ const PROJECTILE_VELOCITY_MAGNITUDE = 4
 const PARTICLE_NUMBERS = 8
 const POINT_HIT = 2
 const POINT_KILL = 5
+const PLAYER_SPEED = 3
 const MAX_PLAYERS = 5
 
 const colors = {
@@ -158,7 +158,7 @@ function initObjects () {
   const pCenter = getPageCenter()
 
   // flush projectiles
-  frontendProjectiles = []
+  frontendProjectiles = {}
   particleGroups = []
 }
 
@@ -224,7 +224,7 @@ function animate () {
   Object.values(frontendPlayers).forEach(player => player.update())
 
   // render projectiles
-  frontendProjectiles.forEach(projectile => projectile.update())
+  Object.values(frontendProjectiles).forEach(projectile => projectile.update())
 }
 
 // ---------------- DOM event handlers ----------------
@@ -239,15 +239,6 @@ function onWindowClick (e) {
   const angle = getAngle(center, { x: e.clientX, y: e.clientY })
   const vx = PROJECTILE_VELOCITY_MAGNITUDE * Math.cos(angle)
   const vy = PROJECTILE_VELOCITY_MAGNITUDE * Math.sin(angle)
-
-  // const projectile = new Projectile({
-  //   center,
-  //   clickPoint: { x: e.clientX, y: e.clientY },
-  //   radius: PROJECTILE_RADIUS,
-  //   color: colors.projectile_bg,
-  //   velocity: new Velocity(vx, vy),
-  //   parent: frontendProjectiles
-  // })
 
   socket.emit(PROJECTILE_FIRED, { center, angle })
 }
@@ -404,7 +395,27 @@ function setupSocketEventHandlers (socket) {
   })
 
   socket.on(UPDATE_PROJECTILES, (serverProjectiles) => {
-    console.log('TODO: draw projectiles', serverProjectiles)
+    for (const projectile of serverProjectiles) {
+      const projectileId = projectile.id
+
+      if (!frontendProjectiles[projectileId]) {
+        frontendProjectiles[projectileId] = new Projectile({
+          id: projectile.id,
+          x: projectile.x,
+          y: projectile.y,
+          radius: PROJECTILE_RADIUS,
+          velocity: new Velocity(projectile.velocity.x, projectile.velocity.y),
+          color: projectileId === socket.id ? myPlayer.color : colors.projectile_colors.enemy
+        })
+      } else {
+        const projectile = frontendProjectiles[projectileId]
+
+        projectile.x = projectile.x
+        projectile.y = projectile.y
+        projectile.velocity.x = projectile.velocity.x
+        projectile.velocity.y = projectile.velocity.y
+      }
+    }
   })
 
   socket.on(PLAYER_DISCONNECTED, playerId => {

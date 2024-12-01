@@ -1,5 +1,6 @@
 const { Server } = require('socket.io')
 const { Projectile } = require('./backend-utils/Projectile')
+const { Velocity } = require('./backend-utils/Velocity')
 // state
 const backendPlayers = {}
 const backendProjectiles = {}
@@ -8,6 +9,17 @@ const playerColorset = ['#618C03', '#F2B705', '#D97904', '#D92B04', '#F27983']
 const getColor = () => {
   const pArr = Object.values(backendPlayers)
   return playerColorset.find(color => pArr.every(p => p.color !== color))
+}
+
+function extractFrontEndProjectiles () {
+  const projectiles = Object.values(backendProjectiles).flat()
+  return projectiles.map(projectile => ({
+    id: projectile.id,
+    x: projectile.x,
+    y: projectile.y,
+    velocity: { x: projectile.velocity.x, y: projectile.velocity.y },
+    playerId: projectile.playerId
+  }))
 }
 
 // events
@@ -61,12 +73,13 @@ function setupSocketIO (server) {
 
       const vx = PROJECTILE_VELOCITY_MAGNITUDE * Math.cos(angle)
       const vy = PROJECTILE_VELOCITY_MAGNITUDE * Math.sin(angle)
+      const newVel = new Velocity(vx, vy)
       const projectile = new Projectile({
         x: center.x,
         y: center.y,
         radius: PROJECTILE_RADIUS,
-        velocity: new Velocity(vx, vy),
-        parent: backendProjectiles[socket.id]
+        velocity: newVel,
+        playerId: socket.id
       })
 
       backendProjectiles[socket.id].push(projectile)
@@ -76,14 +89,14 @@ function setupSocketIO (server) {
   setInterval(() => {
     // update projectile positions
     for (const playerId in backendProjectiles) {
-      const ownerPlayer = backendPlayers[playerId]
+      // const ownerPlayer = backendPlayers[playerId]
       for (const projectile of backendProjectiles[playerId]) {
         projectile.update()
       }
     }
 
     io.emit(UPDATE_PLAYERS, backendPlayers)
-    io.emit(UPDATE_PROJECTILES, backendProjectiles)
+    io.emit(UPDATE_PROJECTILES, extractFrontEndProjectiles())
   }, 15)
 }
 
