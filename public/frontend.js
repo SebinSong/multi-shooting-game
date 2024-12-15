@@ -19,6 +19,7 @@ let keyboardIntervalId = null
 const socket = io()
 
 // socket-events
+const INIT_CANVAS = 'init-canvas'
 const UPDATE_PLAYERS = 'update-players'
 const UPDATE_PROJECTILES = 'update-projectiles'
 const PLAYER_DISCONNECTED = 'player-disconnected'
@@ -118,9 +119,10 @@ const colors = {
   projectile_bg: '#D8D9D7',
   projectile_colors: {
     mine: '#D8D9D7',
-    enemy: '#F2B705'
+    enemy: '#FFFFFF',
+    default: '#FFFFFF'
   },
-  player_colorset: ['#618C03', '#F2B705', '#D97904', '#D92B04', '#F27983']
+  player_colorset: ['#618C03', '#E51C1F', '#F2B705', '#D97904', '#D92B04', '#F27983']
 }
 
 
@@ -150,7 +152,16 @@ function initDOM () {
   // reference: https://stackoverflow.com/questions/53233096/how-to-set-html5-canvas-size-to-match-display-size-in-device-pixels
   canvas.width = window.innerWidth * devicePixelRatio
   canvas.height = window.innerHeight * devicePixelRatio
+  canvas.dataset.initialized = true
   c.scale(devicePixelRatio, devicePixelRatio)
+
+  emitInitCanvas()
+}
+
+function emitInitCanvas () {
+  if (socket.connected && canvas.dataset.initialized) {
+    socket.emit(INIT_CANVAS, { width: canvas.width / devicePixelRatio, height: canvas.height / devicePixelRatio })
+  }
 }
 
 function initObjects () {
@@ -345,6 +356,10 @@ function randomIntBetweenRange (a, b) {
 
 // -------- socket.io ------------
 function setupSocketEventHandlers (socket) {
+  socket.on('connect', () => {
+    emitInitCanvas()
+  })
+
   socket.on(UPDATE_PLAYERS, (serverPlayers) => {
     const idsServer = Object.keys(serverPlayers)
     const idsClient = Object.keys(frontendPlayers)
@@ -395,6 +410,14 @@ function setupSocketEventHandlers (socket) {
   })
 
   socket.on(UPDATE_PROJECTILES, (serverProjectiles) => {
+    const activeProjectileIds = serverProjectiles.map(p => p.id)
+
+    for (const frontendProjectileId  of Object.keys(frontendProjectiles)) {
+      if (!activeProjectileIds.includes(frontendProjectileId)) {
+        delete frontendProjectiles[frontendProjectileId]
+      }
+    }
+
     for (const projectile of serverProjectiles) {
       const projectileId = projectile.id
 
@@ -405,15 +428,13 @@ function setupSocketEventHandlers (socket) {
           y: projectile.y,
           radius: PROJECTILE_RADIUS,
           velocity: new Velocity(projectile.velocity.x, projectile.velocity.y),
-          color: projectileId === socket.id ? myPlayer.color : colors.projectile_colors.enemy
+          color: (projectile.playerId === socket.id ? myPlayer?.color : colors.projectile_colors.enemy) || colors.projectile_colors.default
         })
       } else {
-        const projectile = frontendProjectiles[projectileId]
-
-        projectile.x = projectile.x
-        projectile.y = projectile.y
-        projectile.velocity.x = projectile.velocity.x
-        projectile.velocity.y = projectile.velocity.y
+        const frontendProjectile = frontendProjectiles[projectileId]
+        console.log('@#$ frontendProjectile position:', frontendProjectile.x, frontendProjectile.y)
+        frontendProjectile.x = projectile.x
+        frontendProjectile.y = projectile.y
       }
     }
   })

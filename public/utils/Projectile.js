@@ -7,10 +7,6 @@ class Projectile extends ObjectCircle {
   }
 
   update () {
-    this.velocity.accelerate()
-    this.x += this.velocity.x
-    this.y += this.velocity.y
-
     this.draw()
   }
 }
